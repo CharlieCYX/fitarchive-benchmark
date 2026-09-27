@@ -48,7 +48,7 @@ export default async function DropDetailPage({
   }
 
   const [{ id }, bannerParams] = await Promise.all([params, searchParams]);
-  const [detail, { data: availableProducts }] = await Promise.all([
+  const [detail, { data: availableProducts }, { data: insightOptions }] = await Promise.all([
     getDropDetail(supabase, id),
     supabase
       .from("products")
@@ -56,6 +56,12 @@ export default async function DropDetailPage({
       .in("availability", ["draft", "available"])
       .order("sku")
       .limit(200),
+    // §9.2 link: hypotheses can descend from recorded insights.
+    supabase
+      .from("insights")
+      .select("id, title, type")
+      .order("created_at", { ascending: false })
+      .limit(100),
   ]);
   if (!detail) notFound();
 
@@ -395,6 +401,11 @@ export default async function DropDetailPage({
                 {h.evidence_basis ? (
                   <p className="text-xs text-warm-500">Evidence: {h.evidence_basis}</p>
                 ) : null}
+                {h.linked_insight_title ? (
+                  <p className="text-xs text-warm-500">
+                    Linked insight: {h.linked_insight_title}
+                  </p>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -412,6 +423,16 @@ export default async function DropDetailPage({
               <Input id="h-evidence" name="evidence_basis" placeholder="Drop #001 sell-through + observation log" />
             </FormField>
           </div>
+          <FormField id="h-insight" label="Linked insight" hint="Optional — the insight this hypothesis descends from (§9.2).">
+            <select id="h-insight" name="linked_insight_id" className={inputClass}>
+              <option value="">—</option>
+              {((insightOptions ?? []) as Array<{ id: string; title: string; type: string }>).map((i) => (
+                <option key={i.id} value={i.id}>
+                  [{i.type}] {i.title}
+                </option>
+              ))}
+            </select>
+          </FormField>
           <div>
             <Button type="submit" variant="secondary" size="sm">
               Record hypothesis
