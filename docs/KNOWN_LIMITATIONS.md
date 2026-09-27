@@ -1,6 +1,40 @@
 # Known Limitations
 
-## Phase 4 — Storefront + events (current)
+## Phase 5 — Analytics (current)
+
+- **Dashboards verified unconfigured + at the pure-logic/view level.** The
+  metric views themselves were re-verified against the local Postgres harness
+  (Phase 2 method), but no hosted Supabase project exists to click the UI
+  end-to-end; unconfigured routes render the "Connect Supabase" state and
+  every chart renders an honest empty state with no fabricated numbers.
+- **Channel breakdown is presentation grouping, not a canonical metric.**
+  §12.3's channel view (direct/social/referral/other) is computed by a pure,
+  unit-tested classifier over raw `page_view` attribution columns — no §2
+  metric formula is reimplemented. The classification rules are documented in
+  `lib/metrics/format.ts` and labeled on the chart. Page-view aggregation reads
+  at most 10,000 rows and labels itself when truncated.
+- **Assortment/Research-vs-reality rollups group canonical per-product view
+  rows** (`v_save_rate` / `v_inquiry_rate`) by taxonomy bucket; the rates
+  themselves are never recomputed from raw events. Research (marketplace
+  observations) and internal engagement are different populations — the panel
+  shows them side by side and never as a ratio.
+- **`campaign_ctr` is never shown as a rate.** Impressions are not
+  instrumented, so the CTR column renders "— (no impressions)" per the §2
+  guardrail, and `campaign_ctr` is excluded from dashboard snapshots.
+- **`time_to_sale` snapshots store median days** (the view returns a Postgres
+  interval; it is converted by the unit-tested parser). Snapshot values are
+  point-in-time copies in `metric_snapshots`; portfolio freezing (Phase 9)
+  consumes them via `portfolio_artifacts.metric_snapshot_id`.
+- **Decision cards are insights titled `Decision — <chart>`.** The chart
+  reference is a curated list matching the dashboard panels (free-form chart
+  attachment would need a chart registry, out of scope for V1).
+- **Insight owner is limited to owner/analyst profiles** in the form select;
+  other roles can be attributed later without schema change.
+- **Customer-behavior panel deferred per §12.3** ("no cohort/retention views
+  until enough users"): session counts appear inside the channel and conversion
+  panels, but no dedicated cohort chart exists yet.
+
+## Phase 4 — Storefront + events
 
 - **Storefront/checkout verified unconfigured, not against hosted Supabase.**
   All reads scope to published rows in SQL and all writes go through the
@@ -121,9 +155,6 @@
 - **Node 20 deprecation warning** from `@supabase/supabase-js` during build
   ("Node 20 and below are deprecated…"). Node 20 remains supported; A18 pins
   Node 20 LTS. Revisit when the project standardizes on Node 22.
-- **Playwright browsers are not part of CI yet.** E2E smoke runs manually
-  (`PLAYWRIGHT_BASE_URL` / `PLAYWRIGHT_WEBSERVER=1`); wiring browsers into CI
-  is Phase 10 hardening.
 - **ESLint pinned to 9.x**: `eslint-plugin-react` (transitive via
   `eslint-config-next@16`) is not yet compatible with ESLint 10's rule context
   API. Upgrade when the plugin supports it.

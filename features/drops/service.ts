@@ -75,6 +75,7 @@ export interface DropDetail {
     statement: string;
     expected_outcome: string | null;
     evidence_basis: string | null;
+    linked_insight_title: string | null;
   }>;
   readiness: ReadinessResult;
   assortmentItems: AssortmentItem[];
@@ -147,7 +148,7 @@ export async function getDropDetail(
       .order("position", { ascending: true }),
     supabase
       .from("drop_hypotheses")
-      .select("id, statement, expected_outcome, evidence_basis")
+      .select("id, statement, expected_outcome, evidence_basis, linked_insight_id, insights(title)")
       .eq("drop_id", id)
       .order("created_at"),
     drop.cloned_from_id
@@ -332,7 +333,14 @@ export async function getDropDetail(
     clonedFromName: (clonedFrom as { name?: string } | null)?.name ?? null,
     cloneNames: (clones ?? []) as Array<{ id: string; name: string }>,
     items: itemRows,
-    hypotheses: (hypotheses ?? []) as DropDetail["hypotheses"],
+    hypotheses: ((hypotheses ?? []) as Array<Record<string, unknown>>).map((h) => ({
+      id: h.id as string,
+      statement: h.statement as string,
+      expected_outcome: (h.expected_outcome as string | null) ?? null,
+      evidence_basis: (h.evidence_basis as string | null) ?? null,
+      linked_insight_title:
+        (h.insights as { title?: string } | null)?.title ?? null,
+    })),
     // Page display shows attestations unmet — they are publish-form inputs.
     readiness: evaluateReadiness({
       ...readinessInput,
