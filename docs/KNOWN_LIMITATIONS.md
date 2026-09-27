@@ -155,6 +155,9 @@
 - **Node 20 deprecation warning** from `@supabase/supabase-js` during build
   ("Node 20 and below are deprecated…"). Node 20 remains supported; A18 pins
   Node 20 LTS. Revisit when the project standardizes on Node 22.
+- **Playwright browsers are not part of CI yet.** E2E smoke runs manually
+  (`PLAYWRIGHT_BASE_URL` / `PLAYWRIGHT_WEBSERVER=1`); wiring browsers into CI
+  is Phase 10 hardening.
 - **ESLint pinned to 9.x**: `eslint-plugin-react` (transitive via
   `eslint-config-next@16`) is not yet compatible with ESLint 10's rule context
   API. Upgrade when the plugin supports it.
