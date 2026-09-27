@@ -249,6 +249,26 @@ export class MockAIProvider implements AIProvider {
           MOCK_DISCLOSURE,
         ].join("\n");
       }
+      case "garment.ideation": {
+        const problem = String(c.problem_statement ?? "problem statement pending");
+        const kind = String(c.problem_kind ?? "fit");
+        return [
+          `Ideation directions for ${kind} problem: ${problem}`,
+          "1. Construction move — adjust the pattern at the failure point, not around it.",
+          "2. Material move — swap the stressed component before changing the silhouette.",
+          "3. Modular move — make the failing element detachable/replaceable.",
+          "Every direction is a hypothesis: none is evidence until a physical wear test (§9.4).",
+          MOCK_DISCLOSURE,
+        ].join("\n");
+      }
+      case "portfolio.ko_translation": {
+        return [
+          `[기계 번역 초안 — 사람 검토 필요] ${String(c.title ?? "제목 없음")}`,
+          `원문(EN): ${String(c.text ?? "").slice(0, 500)}`,
+          "Note: the mock provider cannot translate; this draft preserves the English source for a human reviewer.",
+          MOCK_DISCLOSURE,
+        ].join("\n");
+      }
       default: {
         const keys = Object.keys(request.context).sort();
         return [
@@ -284,6 +304,29 @@ export class MockAIProvider implements AIProvider {
           narrative: this.composeText(request),
           disclosure: MOCK_DISCLOSURE,
         };
+      case "garment.ideation": {
+        const kind = String(request.context.problem_kind ?? "fit");
+        return {
+          ideas: [
+            {
+              title: "Construction move",
+              concept: `Re-pattern the ${kind} failure point directly; keep the silhouette.`,
+              risks: ["pattern complexity", "grading effort"],
+            },
+            {
+              title: "Material move",
+              concept: "Swap the stressed component (pocketing, panel, trim) before reshaping.",
+              risks: ["hand-feel change", "cost delta"],
+            },
+            {
+              title: "Modular move",
+              concept: "Make the failing element detachable or replaceable.",
+              risks: ["added hardware", "aesthetic noise"],
+            },
+          ],
+          disclosure: MOCK_DISCLOSURE,
+        };
+      }
       default:
         return {
           narrative: this.composeText(request),
