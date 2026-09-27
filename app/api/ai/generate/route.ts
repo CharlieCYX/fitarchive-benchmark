@@ -7,6 +7,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { createRateLimiter } from "@/lib/rate-limit";
 import { flags } from "@/lib/config/flags";
 import {
+  KNOWN_FEATURES,
   getAIProvider,
   hashSystemPrompt,
   latestPromptFor,
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         ok: false,
-        error: `Unknown feature "${parsed.data.feature}". Registered: ${["style_engine.build_my_fit", "style_engine.can_this_work", "style_engine.decode_reference", "catalog.description_assistant", "campaign.copy_assistant", "ai_lab.eval"].join(", ")}.`,
+        error: `Unknown feature "${parsed.data.feature}". Registered: ${KNOWN_FEATURES.join(", ")}.`,
       },
       { status: 400 },
     );

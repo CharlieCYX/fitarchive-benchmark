@@ -1,46 +1,78 @@
+/**
+ * Studio section registry (route map §23.1). `phase` labels are honest:
+ * sections render a "Planned in Phase X" state until their phase ships.
+ */
 export interface StudioSection {
   href: string;
   title: string;
-  spec: string;
+  spec: string; // Build Bible section
   phase: string;
   summary: string;
 }
 
 export const STUDIO_SECTIONS: StudioSection[] = [
   {
+    href: "/studio/research",
+    title: "Research Inbox",
+    spec: "§7.2",
+    phase: "Live — Phase 3",
+    summary: "Manual marketplace capture, duplicate detection, drop-candidate flags.",
+  },
+  {
     href: "/studio/catalog",
-    title: "Catalog Ops",
-    spec: "§9.1",
-    phase: "Live — Phase 4",
-    summary: "Product intake form + state machine (draft → repair → listed → reserved → sold → withdrawn), defect notes, measurements, tag assignment with provenance + accept/reject.",
+    title: "Catalog",
+    spec: "§7.3",
+    phase: "Live — Phase 3",
+    summary: "Product master: condition, measurements, ownership, availability.",
+  },
+  {
+    href: "/studio/sellers",
+    title: "Sellers",
+    spec: "§7.4",
+    phase: "Live — Phase 3",
+    summary: "Seller CRM, permission ledger, agreements, settlements.",
   },
   {
     href: "/studio/drops",
     title: "Drops",
-    spec: "§9.2",
-    phase: "Live — Phase 4",
-    summary: "Create drops, attach products, stage → announce → live → archive lifecycle (go-live/close enforce drop_invariant + availability alignment).",
-  },
-  {
-    href: "/studio/orders",
-    title: "Orders",
-    spec: "§9.3",
-    phase: "Live — Phase 4",
-    summary: "Review checkout-created orders, confirm payment (order_paid + confirmation email + receipt), fulfill (order_shipped), cancel with reason.",
-  },
-  {
-    href: "/studio/insights",
-    title: "Insights",
-    spec: "§12",
-    phase: "Live — Phase 5",
-    summary: "Drop performance (view→sale conversion), sell-through + time-to-sale, demand signals, closet coverage — org-scoped SQL views.",
+    spec: "§7.5",
+    phase: "Live — Phase 3",
+    summary: "Drop builder: tiers, price ladder, readiness gate, hypotheses.",
   },
   {
     href: "/studio/campaigns",
     title: "Campaigns",
-    spec: "§9.4",
+    spec: "§7.6",
+    phase: "Live — Phase 3",
+    summary: "Briefs, channel plan, tracked links, AI copy as suggestion.",
+  },
+  {
+    href: "/studio/launch",
+    title: "Launch Control",
+    spec: "§7.7",
+    phase: "Phase 3",
+    summary: "Publish gate, live traffic, incidents, rollback.",
+  },
+  {
+    href: "/studio/analytics",
+    title: "Analytics",
+    spec: "§9.1",
     phase: "Live — Phase 5",
-    summary: "Subject-line + hero copy drafts; A/B assignment (50/50 per session), send window rules, per-variant stats, variant_delivery audit.",
+    summary: "Canonical metrics from first-party events — no hard-coded numbers.",
+  },
+  {
+    href: "/studio/insights",
+    title: "Insights",
+    spec: "§9.2",
+    phase: "Live — Phase 5",
+    summary: "Observation → hypothesis → experiment → validated result.",
+  },
+  {
+    href: "/studio/experiments",
+    title: "Experiments",
+    spec: "§12.4",
+    phase: "Live — Phase 5",
+    summary: "Hypothesis → variants → running → concluded, with strength labels.",
   },
   {
     href: "/studio/ai-lab",
@@ -48,5 +80,26 @@ export const STUDIO_SECTIONS: StudioSection[] = [
     spec: "§13.5",
     phase: "Live — Phase 7",
     summary: "Prompt versions, generation provenance, evaluation harness.",
+  },
+  {
+    href: "/studio/garments",
+    title: "Garment Lab",
+    spec: "§9.4",
+    phase: "Live — Phase 8",
+    summary: "Problem → evidence → ideation → prototype → wear test.",
+  },
+  {
+    href: "/studio/product-lab",
+    title: "Product Lab",
+    spec: "§9.5",
+    phase: "Live — Phase 8",
+    summary: "Problem briefs, PRDs, prototype tests, postmortems.",
+  },
+  {
+    href: "/studio/portfolio",
+    title: "Portfolio",
+    spec: "§21",
+    phase: "Live — Phase 9",
+    summary: "Role-lensed case studies from frozen snapshots.",
   },
 ];
