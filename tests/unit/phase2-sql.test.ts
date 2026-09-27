@@ -15,7 +15,14 @@ const migrationsDir = path.join(root, "supabase", "migrations");
 const migrations = readdirSync(migrationsDir)
   .filter((f) => f.endsWith(".sql"))
   .sort();
-const seed = readFileSync(path.join(root, "supabase", "seed.sql"), "utf8");
+const seedFiles = [
+  path.join(root, "supabase", "seed.sql"),
+  ...readdirSync(path.join(root, "supabase", "seeds"))
+    .filter((f) => f.endsWith(".sql"))
+    .sort()
+    .map((f) => path.join(root, "supabase", "seeds", f)),
+];
+const seed = seedFiles.map((f) => readFileSync(f, "utf8")).join("\n");
 
 describe("migration set (DATA_MODEL.md §5)", () => {
   it("contains exactly 0001–0018 in order", () => {
@@ -55,6 +62,12 @@ describe("migration set (DATA_MODEL.md §5)", () => {
 });
 
 describe("seed determinism (§23.4, A20)", () => {
+  it("splits into seed.sql + seeds/*.sql matching config.toml sql_paths", () => {
+    expect(seedFiles.length).toBeGreaterThanOrEqual(10);
+    const config = readFileSync(path.join(root, "supabase", "config.toml"), "utf8");
+    expect(config).toContain('sql_paths = ["./seed.sql", "./seeds/*.sql"]');
+  });
+
   it("contains no now() / random() / gen_random_uuid() value generation", () => {
     expect(seed).not.toMatch(/\bnow\s*\(/);
     expect(seed).not.toMatch(/\brandom\s*\(/);
