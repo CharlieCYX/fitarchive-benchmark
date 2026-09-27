@@ -2,7 +2,7 @@
 
 Owning module (ARCHITECTURE.md §3) for routes: /studio/analytics, /studio/insights, POST /api/events.
 Core tables: events, sessions, insights, experiments, metric_definitions, metric_snapshots.
-Status: **event service built — Phase 4**; dashboards land in Phase 5.
+Status: **event service (Phase 4) + dashboards/insights/experiments (Phase 5) built**.
 
 Event service (`ingest.ts` pure + `service.ts` server-only): the ONLY writer
 to `events`/`sessions` — dictionary-validated ingest (lib/validation/events.ts),
