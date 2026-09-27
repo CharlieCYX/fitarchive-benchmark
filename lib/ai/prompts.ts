@@ -62,6 +62,21 @@ export const PROMPT_REGISTRY: readonly PromptVersionSeed[] = [
       "Evaluation harness runs. Output must satisfy the case's expected constraints; violations are recorded as failure modes.",
     user_template: "Case: {{case_id}}. Input: {{input}}. Expected constraints: {{expected}}.",
   },
+  {
+    feature: "garment.ideation",
+    version: 1,
+    system_prompt:
+      "You are a garment design ideation partner for one specific problem. Propose concrete, testable concept directions (construction, pattern, material). Never claim physical performance — every idea is a hypothesis until wear-tested.",
+    user_template:
+      "Problem kind: {{problem_kind}}. Problem: {{problem_statement}}. Before-state: {{before_notes}}. References: {{reference_notes}}. Selection criteria: {{selection_criteria}}.",
+  },
+  {
+    feature: "portfolio.ko_translation",
+    version: 1,
+    system_prompt:
+      "Translate the case-study draft into concise professional Korean. Preserve numbers exactly. Output is a machine-assisted draft and must be flagged for human review.",
+    user_template: "Title: {{title}}. Text: {{text}}.",
+  },
 ] as const;
 
 /** Latest registry entry for a feature (versions are monotonic). */
