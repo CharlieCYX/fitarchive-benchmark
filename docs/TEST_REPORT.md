@@ -1,5 +1,37 @@
 # Test Report
 
+## Phase 5 — Analytics (2026-09-29)
+
+Environment: Node v20.20.2, pnpm 10.20.0, Next.js 16.3.6. Verification on the
+local-disk copy (`/tmp/fitarchive-p5`) per the FUSE workaround.
+
+| Check | Command | Result |
+|---|---|---|
+| Install | `pnpm install` | ✅ clean (unchanged lockfile) |
+| Lint | `pnpm run lint` | ✅ 0 errors, 0 warnings |
+| Typecheck | `pnpm run typecheck` | ✅ clean |
+| Unit tests | `pnpm test` | ✅ 18 files, 145 tests passed |
+| Build | `pnpm run build` | ✅ 35 routes; `/studio/analytics`, `/studio/insights`, `/studio/experiments`, `/studio/experiments/[id]` all dynamic (`ƒ`) |
+| Route probe (unconfigured) | `pnpm start` + curl | ✅ `/studio/analytics`, `/studio/insights`, `/studio/experiments` all 200, each rendering the "Connect Supabase" state — no fake numbers |
+| Metric-view assertions | local Postgres harness (Phase 2 method, pgserver; `auth` shim + pgcrypto-line skip only) | ✅ migrations 0001–0019 + seed clean from zero; `v_sell_through` Drop #001 = 0.7500; `v_gmv` total 529.00; `v_fitarchive_contribution` 120.48; `v_dq_missing_properties` = 0; `v_dq_duplicate_sources` = 0; 11 metric_definitions; `v_campaign_ctr` 22 clicks; `v_style_feedback_success` 3 modes; `v_time_to_sale` rows present |
+| §12.5 seed completeness | harness | ✅ exactly 5 draft experiments for Drop #002 (price-ladder, photography, collection framing, hero concentration, external discovery); every `primary_metric`/`guardrail_metrics` key exists in `metric_definitions` |
+
+New unit coverage (2 new files, 20 new tests):
+- `metric-format.test.ts` — rate/count/sample-size formatting (null renders "—",
+  never a fabricated 0%); Postgres interval text → days (median time-to-sale);
+  channel attribution grouping (UTM wins, referrer-host fallback, no-signal =
+  direct); §9.2 evidence-state enum excludes `forecast` and the insight schema
+  rejects it even though the DB enum contains it; §12.4 experiment state
+  machine (legal transitions only, terminal states, conclude requires written
+  conclusion + strength, running/paused only).
+- `chart-geometry.test.ts` — nice axis maxima, bar fractions (no ÷0), line
+  points with null gaps, donut slice paths (full circle split into two arcs).
+
+Not run here: Playwright E2E for the analytics UI (browsers not in this
+workspace's CI) and live hosted-Supabase exercise of the insight/experiment/
+snapshot server actions (no project provisioned — actions are guarded via
+`requireOwnerContext` and degrade to honest error banners).
+
 ## Phase 4 — Storefront + Events (2026-09-28)
 
 Environment: Node v20.20.2, pnpm 10.20.0, Next.js 16.3.6. Verification on the
