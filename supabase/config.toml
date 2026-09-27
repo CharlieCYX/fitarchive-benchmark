@@ -1,0 +1,9 @@
+# Minimal Supabase CLI config — Phase 2 adds the seed path set only.
+# CLI fills all other sections with defaults (supabase/supabase-cli config schema).
+project_id = "fitarchive-benchmark"
+
+[db.seed]
+enabled = true
+# Applied in order on `supabase db reset` / `supabase seed`. Each file is an
+# independent transaction and fully deterministic (see scripts/seed-reset.md).
+sql_paths = ["./seed.sql", "./seeds/*.sql"]
