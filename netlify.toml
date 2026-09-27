@@ -1,0 +1,8 @@
+[build]
+  command = "pnpm run build"
+  publish = ".next"
+
+# Next.js runtime support is auto-detected by Netlify (@netlify/plugin-nextjs).
+
+[build.environment]
+  NODE_VERSION = "20"
