@@ -26,3 +26,11 @@
 - **ESLint pinned to 9.x**: `eslint-plugin-react` (transitive via
   `eslint-config-next@16`) is not yet compatible with ESLint 10's rule context
   API. Upgrade when the plugin supports it.
+- **Milestone-push tooling gaps (this workspace only)**: the automation token
+  used to push to GitHub lacks the `workflow` OAuth scope, so
+  `.github/workflows/ci.yml` could not be committed remotely, and the 163KB
+  `pnpm-lock.yaml` exceeds the per-call payload limit of the file-push tool.
+  Both files exist, complete and verified, in the local working copy; push them
+  from any environment with git credentials or a full-scope token
+  (`git push origin main`). Until the lockfile lands remotely, run CI installs
+  with `pnpm install` (non-frozen).
