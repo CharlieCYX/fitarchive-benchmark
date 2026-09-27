@@ -1,11 +1,8 @@
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 
 /**
  * Public landing / current drop (route map §23.1: `/`).
- * Phase 1: explains the venture honestly. No fake stats, no dead CTAs —
- * the storefront routes (/drops, /products/[slug], /search) land in Phase 4
- * and are named as such, not linked.
+ * Links only to live routes; future modules are named in copy, not linked.
  */
 export default function LandingPage() {
   return (
@@ -26,24 +23,27 @@ export default function LandingPage() {
         </p>
       </section>
 
-      {/* Current drop — honest placeholder */}
+      {/* Current drop — live archive link */}
       <section className="border-t border-warm-200 py-16">
         <div className="flex items-baseline justify-between">
-          <h2 className="font-display text-2xl text-ink">The current drop</h2>
-          <Badge tone="accent">In preparation</Badge>
+          <h2 className="font-display text-2xl text-ink">The drops</h2>
+          <Link href="/drops" className="text-sm text-accent hover:text-accent-strong">
+            Browse the archive →
+          </Link>
         </div>
-        <div className="mt-8 rounded-lg border border-dashed border-warm-300 bg-warm-100/50 px-6 py-12">
-          <h3 className="font-display text-lg text-ink">Drop #001 is being curated</h3>
-          <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-warm-700">
-            The first drop is still in research and sourcing: pieces are being
-            observed, sellers contacted, and permissions documented before anything
-            is published. The public storefront — drop archive, product pages and
-            search (<span className="text-ink">/drops</span>,{" "}
-            <span className="text-ink">/products</span>,{" "}
-            <span className="text-ink">/search</span>) — arrives in Phase 4 of the
-            build, with real inventory and real numbers. Nothing here is mocked up
-            to look further along than it is.
-          </p>
+        <p className="mt-6 max-w-xl text-sm leading-relaxed text-warm-700">
+          Every published drop — concept, story, pieces, and what happened to
+          them — lives in the archive. Sold pieces stay visible; the evidence
+          trail is the point. Only pieces that passed the readiness gate
+          (permissions, measurements, media rights) ever appear.
+        </p>
+        <div className="mt-6 flex gap-4 text-sm">
+          <Link href="/drops" className="text-accent hover:text-accent-strong">
+            /drops — drop archive →
+          </Link>
+          <Link href="/search" className="text-accent hover:text-accent-strong">
+            /search — find a piece →
+          </Link>
         </div>
       </section>
 

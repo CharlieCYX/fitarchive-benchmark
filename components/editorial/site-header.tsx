@@ -12,6 +12,12 @@ export function SiteHeader() {
           FitArchive
         </Link>
         <nav className="flex items-center gap-6 text-sm">
+          <Link href="/drops" className="text-warm-700 hover:text-ink">
+            Drops
+          </Link>
+          <Link href="/search" className="text-warm-700 hover:text-ink">
+            Search
+          </Link>
           <Link href="/studio" className="text-warm-700 hover:text-ink">
             Studio <span className="text-warm-500">(operators)</span>
           </Link>
