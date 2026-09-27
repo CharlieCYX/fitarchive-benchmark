@@ -1,6 +1,41 @@
 # Known Limitations
 
-## Phase 2 — Database (current)
+## Phase 3 — Operator core (current)
+
+- **Server actions verified against the local Postgres harness, not hosted
+  Supabase.** All mutations (capture, promote, availability transitions,
+  permission grant/revoke, publish gate, tracked links) target the real
+  tables/RLS and degrade to the "Connect Supabase" state without env, but no
+  hosted project exists in this workspace to click them through end-to-end.
+- **Two §10.2 checks are attestations, not data.** "Personas documented" and
+  "rollback verified" have no schema storage; the drop page shows them unmet
+  and the publish form requires explicit operator checkboxes. The attestation
+  is recorded implicitly by the `publication_change` audit row on the drop.
+- **"Dashboard receiving test events" blocks fresh drops.** The check counts
+  events tagged with the drop's id; a never-published drop has none until test
+  traffic is sent (the seed's Drop #001 has 249). This is the spec's intent
+  (§10.2) but means Drop #002 cannot publish before instrumentation is
+  exercised — the failure reason says exactly that.
+- **Availability: `sold` is terminal in Phase 3.** Returns/refunds arrive with
+  commerce (Phase 4, `refunds_returns`); the state machine says so instead of
+  offering a fake "un-sell".
+- **Product imagery is metadata-only.** `product_assets` rows record
+  bucket/path/alt/provenance/rights; actual binary upload to Supabase Storage
+  is a later-phase integration (storage buckets untested here).
+- **Campaign "copy" assets store a path/reference only.** Copy variants are
+  managed as `campaign_posts.copy` (per-channel, scheduled); asset approval
+  governs image/post assets. AI-generated copy lands in Phase 7 as
+  `ai_generations` drafts linked via `campaign_assets.ai_generation_id`.
+- **Drop reorder is position-swap via up/down buttons** (no drag-and-drop);
+  each swap is a server action round-trip.
+- **Seed products carry no `source_listing_id`.** The 0019 lineage column is
+  populated by the promote action for new products; the pre-existing seeded
+  products predate the inbox narrative and stay unlinked.
+- **Seller CRM has no message log UI yet** (§7.4 "message log" is tracked via
+  `research_observations` on listings and audit_log; a dedicated messaging
+  surface is not built).
+
+## Phase 2 — Database
 
 - **Verified against a local Postgres, not hosted Supabase.** Migrations
   0001–0018 + seed run clean from zero on a real Postgres with `auth` shimmed

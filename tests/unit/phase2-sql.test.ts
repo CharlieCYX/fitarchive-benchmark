@@ -25,11 +25,17 @@ const seedFiles = [
 const seed = seedFiles.map((f) => readFileSync(f, "utf8")).join("\n");
 
 describe("migration set (DATA_MODEL.md §5)", () => {
-  it("contains exactly 0001–0018 in order", () => {
-    expect(migrations).toHaveLength(18);
+  it("contains 0001–0019 in order (0019 added in Phase 3)", () => {
+    expect(migrations).toHaveLength(19);
     migrations.forEach((f, i) => {
       expect(f.startsWith(String(i + 1).padStart(4, "0") + "_")).toBe(true);
     });
+  });
+
+  it("0019 links products back to source listings (§7.3 lineage)", () => {
+    const m19 = readFileSync(path.join(migrationsDir, "0019_phase3_links.sql"), "utf8");
+    expect(m19).toContain("source_listing_id");
+    expect(m19).toMatch(/references public\.source_listings/);
   });
 
   it("events dedupe contract exists (unique org_id + client_event_id)", () => {

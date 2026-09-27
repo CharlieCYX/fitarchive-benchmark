@@ -1,5 +1,44 @@
 # Test Report
 
+## Phase 3 — Operator core (2026-09-28)
+
+Environment: Node v20.20.2, pnpm 10.20.0, Next.js 16.3.6. Verification on the
+local-disk copy (`/tmp/fitarchive`) per the FUSE workaround.
+
+| Check | Command | Result |
+|---|---|---|
+| Install | `pnpm install` | ✅ clean (unchanged lockfile) |
+| Lint | `pnpm run lint` | ✅ 0 errors, 0 warnings |
+| Typecheck | `pnpm run typecheck` | ✅ clean |
+| Unit tests | `pnpm test` | ✅ 12 files, 85 tests passed |
+| Build | `pnpm run build` | ✅ 26 routes; new studio routes dynamic (`ƒ`) as designed |
+| Route probe (unconfigured) | `pnpm start` + curl | ✅ `/studio`, `/studio/research`, `/studio/catalog`, `/studio/sellers`, `/studio/drops`, `/studio/campaigns` all 200, each rendering the "Connect Supabase" state |
+| Migrations from zero | local Postgres harness (Phase 2 method) | ✅ 0001–0019 all clean; 60 base tables; `products.source_listing_id` present |
+| Seed (regenerated) | harness | ✅ clean; measurements now cover all 12 Drop #001 items |
+| §10.2 gate vs seed | SQL probe of gate inputs | ✅ Drop #001 satisfies all 14 computed checks (attestations are publish-form inputs) |
+
+New unit coverage (6 new files, 54 new tests):
+- `url-normalization.test.ts` — §7.2 dedupe: tracking-param strip, host/case
+  normalization, param sorting, non-http rejection, same-listing equality.
+- `availability.test.ts` — §7.3 state machine: happy path, release from
+  reserved, sold is terminal, illegal-jump reasons.
+- `permission-gate.test.ts` — §5.2 states + §7.4 publish gate: owned needs no
+  permission; revoked/expired/non-grant block with named reasons.
+- `readiness-gate.test.ts` — §10.2: exactly 16 checks; full pass; individual
+  failures for permissions, size, tiers, measurements, pricing, descriptions,
+  assets, tracked links, test events, fulfillment/returns wording, media
+  rights, and the two manual attestations.
+- `settlement-display.test.ts` — §10.4 wording: terms description, canonical
+  row order, "never profit" label, Postgres numeric-string handling; plus
+  assortment summary (tiers/categories/aesthetics/price ladder).
+- `utm.test.ts` — §7.6 tracked links: UTM append/replace, non-http rejection,
+  deterministic link codes.
+
+Not run here: Playwright E2E for the new studio flows (browsers not in this
+workspace's CI), live hosted-Supabase exercise of the server actions (no
+project provisioned — actions are guarded and unit-tested at the pure-logic
+level; DB-level behavior verified via the Postgres harness).
+
 ## Phase 1 — Foundation (2026-09-27)
 
 Environment: Node v20.20.2, pnpm 10.20.0 (via corepack), Next.js 16.3.6,
@@ -43,7 +82,7 @@ pre-created to mirror Supabase.
 | Check | Result |
 |---|---|
 | Migrations 0001–0018 applied from zero, in order | ✅ all 18 clean |
-| `supabase/seed.sql` applied | ✅ clean |
+| `supabase/seed.sql` + `supabase/seeds/*.sql` (11 files, `[db.seed] sql_paths` order) applied | ✅ clean |
 | Table count | 60 base tables in `public` — exact 1:1 match with the §2 contract list (verified name-by-name) |
 | Seed invariants | ✅ 24 listings, 15 products (14 published + 1 draft), 4 sellers, 2 drops, 2 campaigns, 6 tracked links, 472 events (300–500 required), 62 sessions, 92 taxonomy tags |
 | Event dedupe (`unique(org_id, client_event_id)`) | ✅ replaying an event insert is a no-op; count unchanged |
@@ -65,3 +104,4 @@ pre-created to mirror Supabase.
 Not run here: against a hosted Supabase project (none provisioned in this
 workspace), `supabase db reset` CLI path (documented in scripts/seed-reset.md),
 Playwright E2E (unchanged app surface in this phase).
+
