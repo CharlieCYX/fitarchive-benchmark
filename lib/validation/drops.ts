@@ -71,6 +71,8 @@ export const dropHypothesisSchema = z.object({
   statement: z.string().trim().min(4, "Hypothesis statement is required.").max(1000),
   expected_outcome: optionalText(1000),
   evidence_basis: optionalText(1000),
+  /** §9.2 link: hypothesis-level insight this statement descends from. */
+  linked_insight_id: optionalText(40),
 });
 
 /** Publish gate: manual §10.2 checks need explicit operator attestation. */

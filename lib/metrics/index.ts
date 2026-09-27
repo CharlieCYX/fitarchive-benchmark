@@ -4,7 +4,9 @@
  * metric_definitions — never ad-hoc math in components.
  *
  * Phase 2: the views and registry rows exist (0015_metric_views.sql).
- * Typed query accessors land with the analytics UI in Phase 5.
+ * Phase 5: typed query accessors in features/analytics/metric-service.ts
+ * (server-only) back the dashboards; formatting/attribution helpers in
+ * ./format.
  */
 
 /** Canonical metric keys — must match metric_definitions.key (0015). */
@@ -41,3 +43,13 @@ export const METRIC_VIEWS: Record<MetricKey, string> = {
 
 export { computeSettlement, demoPaymentFeeSgd } from "./settlement";
 export type { SettlementInput, SettlementResult } from "./settlement";
+export {
+  CHANNEL_LABELS,
+  classifyChannel,
+  formatCount,
+  formatIntervalDays,
+  formatRate,
+  formatSampleSize,
+  intervalToDays,
+} from "./format";
+export type { ChannelGroup } from "./format";
