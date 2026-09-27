@@ -1,5 +1,60 @@
 # Test Report
 
+## Phase 6–7 — Shopper Archive + Style Engine + AI subsystem (2026-09-30)
+
+Environment: Node v20.20.2, pnpm 10.20.0 (via corepack), Next.js 16.3.6.
+Verification on the local-disk copy (`/tmp/fitarchive-p6`) per the FUSE
+workaround.
+
+| Check | Command | Result |
+|---|---|---|
+| Install | `pnpm install --frozen-lockfile` | ✅ clean (lockfile unchanged — no new deps) |
+| Lint | `pnpm run lint` | ✅ 0 errors, 0 warnings |
+| Typecheck | `pnpm run typecheck` | ✅ clean |
+| Unit tests | `pnpm test` | ✅ 24 files, 200 tests passed |
+| Build | `pnpm run build` | ✅ 43 routes; `/archive`, `/archive/collections/[id]`, `/style/build|compatibility|decode`, `/studio/ai-lab`, `/api/ai/generate`, `/api/style/sessions`, `/api/style/generate` all dynamic (`ƒ`) |
+| Route probe (unconfigured) | `pnpm start` + curl | ✅ `/archive`, `/style`, `/style/build`, `/style/compatibility`, `/style/decode`, `/studio/ai-lab`, `/archive/collections/<uuid>` all 200 |
+| Style API unconfigured | curl POST /api/style/generate (build_my_fit) | ✅ 200 with full deterministic result + honest `catalogNote` ("Catalog and closet are offline…"); `/api/style/sessions` → `{persisted:false}` |
+| Style API validation | curl POST invalid mode / bad payload | ✅ 400 |
+| AI gateway unconfigured | curl POST /api/ai/generate | ✅ 401 sign-in required (never reaches a provider) |
+
+New unit coverage (5 new files, 55 new tests):
+- `mock-provider.test.ts` — mock provider determinism (byte-identical text
+  and structured output), context-composed output (not lorem ipsum),
+  disclosure marker on every output, §13.1 surface shape (no
+  analyzeImage/embed), malformed-provider fixture never throws.
+- `ai-structured-validation.test.ts` — structured-output contract: clean
+  JSON, fenced JSON, JSON-in-prose accepted; pure prose, truncated JSON and
+  schema-mismatch safely rejected (§16 AI contract); gateway + style payload
+  schemas (climate defaults hot-humid, 1–5 references, slug-only tags).
+- `style-build.test.ts` — §8.3/§8.8 constraint logic: wool rejected in
+  hot-humid with named reason; sold/reserved/draft items never recommended;
+  budget is a hard ceiling; rejected silhouettes excluded absolutely; owned
+  items win their role over catalog equivalents; contradictions named;
+  insufficient-signal honesty; determinism; confidence penalty on
+  contradictions; decode matches exclude sold items.
+- `style-compatibility.test.ts` — §8.4: compatible sanity pair; era clash +
+  loud palettes → non-compatible with repair moves; wool×mesh material gap →
+  swap repair; oversized-on-oversized proportion risk; determinism;
+  Singapore climate warnings.
+- `style-decode-narrative.test.ts` — §8.5: low-confidence reads uncertain,
+  missing dimensions left open, distinctive vs incidental by confidence,
+  wool→linen substitution, human reads trusted; §13.4 narrative wrapper:
+  valid provider enhances, malformed output falls back + flags
+  `malformed_provider_output`, disabled provider is clean pass-through,
+  throwing provider flagged `provider_error`.
+- `eval-harness.test.ts` — all 8 seeded §8.8 cases pass against the real
+  engine; all six failure modes covered; harness teeth proven with a
+  sabotaged expectation; §13.5 rating dimensions are exactly the spec six.
+
+Not run here: Playwright E2E for /style/* and /archive (browsers not in this
+workspace's CI) and live hosted-Supabase exercise of the style/archive/AI
+server actions + API routes (no project provisioned — every route degrades
+honestly: 503/401/unpersisted rather than crashing). SQL-level behavior of
+the 0012 tables + 0013 RLS was verified in Phase 2; the new
+`seeds/12_ai_style.sql` prompt versions follow the same idempotent
+upsert pattern as the existing seed set.
+
 ## Phase 5 — Analytics (2026-09-29)
 
 Environment: Node v20.20.2, pnpm 10.20.0, Next.js 16.3.6. Verification on the
