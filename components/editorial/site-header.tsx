@@ -18,6 +18,12 @@ export function SiteHeader() {
           <Link href="/search" className="text-warm-700 hover:text-ink">
             Search
           </Link>
+          <Link href="/style" className="text-warm-700 hover:text-ink">
+            Style
+          </Link>
+          <Link href="/archive" className="text-warm-700 hover:text-ink">
+            Archive
+          </Link>
           <Link href="/studio" className="text-warm-700 hover:text-ink">
             Studio <span className="text-warm-500">(operators)</span>
           </Link>
