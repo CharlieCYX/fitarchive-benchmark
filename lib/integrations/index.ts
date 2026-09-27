@@ -1,6 +1,15 @@
 /**
  * Import/export adapters (ARCHITECTURE.md §7): CSV import/export and manual
  * external-source adapters (incl. SSQRD manual discovery). No scraping, no
- * fabricated live integrations (§2.2). Implemented from Phase 2 onward.
+ * fabricated live integrations (§2.2).
  */
-export const INTEGRATIONS_STATUS = "planned-phase-2" as const;
+export {
+  RESEARCH_CSV_COLUMNS,
+  PERMISSION_STATES,
+  parseCsv,
+  validateResearchCsv,
+  researchCsvRowSchema,
+  type CsvImportValidation,
+  type CsvRowError,
+  type ResearchCsvRow,
+} from "./csv";
