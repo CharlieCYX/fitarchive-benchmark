@@ -1,6 +1,45 @@
 # Known Limitations
 
-## Phase 5 — Analytics (current)
+## Phase 6–7 — Archive + Style Engine + AI (current)
+
+- **Verified unconfigured + at the pure-logic level.** All style-engine
+  constraint logic, the mock provider, the structured-output validator and
+  the eval harness are pure and unit-tested (55 new tests); routes render 200
+  unconfigured and `/api/style/generate` produces full deterministic results
+  without a database. No hosted Supabase exists in this workspace, so the
+  persisted path (style_sessions, ai_generations, feedback events) is verified
+  by code review + the Phase 2 Postgres harness pattern, not clicked live.
+- **The mock provider is deliberately not an LLM.** It composes deterministic,
+  context-derived text (labeled with a `[mock-ai …]` disclosure on every
+  output) and satisfies the structured-output contract. `analyzeImage`/`embed`
+  are intentionally unimplemented — §13.1 marks them optional and §17.3
+  requires full function without paid AI. A real provider slots into
+  `getAIProvider()` without touching callers.
+- **AI narration is additive, never decisive.** The engine's deterministic
+  text is always included; the provider's re-wording is appended and any
+  malformed/schema-breaking output falls back with a
+  `malformed_provider_output` flag on the logged ai_generations row.
+- **Closet items carry category + color only.** Without per-item attribute
+  tagging UI, closet garments match style signals mainly on category/role;
+  the engine is honest about this (owned items surface as neutral bases
+  rather than pretending attribute certainty).
+- **Anonymous style sessions are service-role writes** keyed to the
+  pseudonymous `fa_sid` session (same trust model as event ingest):
+  feedback/save actions verify ownership by profile id or matching anon
+  session before writing. Possession of a session uuid is not sufficient.
+- **Style references accept URLs and manual attribute tags, not image
+  analysis.** `style_references.asset_path` is supported by the schema, but
+  there is no upload widget or vision decode in V1 — Decode This Reference
+  works from human-entered attributes (with confidence), which is the honest
+  deterministic path.
+- **Eval ratings are stored on the generation row** (`human_editor_notes`
+  JSON + `safety_or_truth_flags`) rather than a separate ratings table —
+  keeps the §13.3 provenance trail in one place; aggregating rating trends
+  across runs would justify a real table later.
+- **AI gateway rate limit is per-instance** (same in-memory limiter trade-off
+  as /api/events, Phase 4).
+
+## Phase 5 — Analytics
 
 - **Dashboards verified unconfigured + at the pure-logic/view level.** The
   metric views themselves were re-verified against the local Postgres harness
