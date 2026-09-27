@@ -102,3 +102,13 @@ idempotent ingest (`unique(org_id, client_event_id)`); every displayed metric co
 from a SQL view registered in `metric_definitions` and accessed via `lib/metrics`.
 **Consequences:** Charts can always be traced to raw rows (§20.4); dedupe stress
 test is a unique-index test; adding a metric = one view + one registry row.
+
+## ADR-009 — Demo checkout lives at `/checkout/[orderId]` (additive route)
+**Context:** The canonical route map (§23.1) lists storefront routes but names no
+checkout route; §10.3 requires a demo checkout (simulated payment state machine).
+**Decision:** Add exactly one additive public route, `/checkout/[orderId]`, which
+renders the simulated payment screen (created → pending → paid | failed). No
+existing route is renamed or repurposed; the route map is otherwise unchanged.
+**Consequences:** Checkout is deep-linkable and the PDP stays clean. The order id
+in the URL is the bearer reference for the demo (acceptable for simulated orders;
+a real adapter would add buyer-scoped authorization — see KNOWN_LIMITATIONS).

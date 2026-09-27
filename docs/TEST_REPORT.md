@@ -1,5 +1,49 @@
 # Test Report
 
+## Phase 4 — Storefront + Events (2026-09-28)
+
+Environment: Node v20.20.2, pnpm 10.20.0, Next.js 16.3.6. Verification on the
+local-disk copy (`/tmp/fitarchive`) per the FUSE workaround.
+
+| Check | Command | Result |
+|---|---|---|
+| Install | `pnpm install` | ✅ clean (unchanged lockfile) |
+| Lint | `pnpm run lint` | ✅ 0 errors, 0 warnings |
+| Typecheck | `pnpm run typecheck` | ✅ clean |
+| Unit tests | `pnpm test` | ✅ 16 files, 125 tests passed |
+| Build | `pnpm run build` | ✅ 34 routes; `/api/events`, `/products/[slug]`, `/drops/[slug]`, `/checkout/[orderId]` dynamic (`ƒ`); `/drops`, `/search` static in unconfigured builds (they flip dynamic once env is present, because `getServerClient` then touches cookies) |
+| Route probe (unconfigured) | `pnpm start` + curl | ✅ `/drops`, `/search?q=coat`, `/products/fa-001`, `/checkout/<uuid>` all 200, each rendering the "Connect Supabase" state — no fake catalog |
+| Event API validation | curl POST invalid body / invalid JSON / share_click with both product_id+drop_id | ✅ 400 with named zod issues in each case |
+| Event API unconfigured | curl POST valid `drop_view` without Supabase env | ✅ graceful 503 (`event ingest is not configured…`), not a 500 crash |
+
+New unit coverage (4 new files, 40 new tests):
+- `events-validation.test.ts` — dictionary coverage (exactly 19 names), valid
+  samples for every storefront event, unknown-name/missing-prop/invalid-uuid
+  rejection, share_click XOR, negative revenue rejection; dedupe contract via
+  a memory writer honoring `unique(org_id, client_event_id)` (replay →
+  `deduped`, store size stays 1, per-org scoping); identity is built from
+  server context only (client-sent `session_id`/`profile_id` never reach the
+  event row).
+- `checkout-state.test.ts` — §10.3 state machine: created→pending→paid writes
+  (order paid + paid_at, payment `simulated`, item sold), pending→failed
+  releases the item (order cancelled, payment `failed`, item available),
+  terminal states, illegal jumps, order-status mapping, demo order numbers.
+- `storefront-query.test.ts` — published-only scoping predicate; price band,
+  category, aesthetic, material, size (variant label), colour text match,
+  availability filters; AND-semantics text query; all four sorts; query-param
+  parsing drops junk; `parsed_filters` serialization; ownership wording →
+  purchase mode mapping.
+- `attribution.test.ts` — UTM extraction (URLSearchParams + query records,
+  trimming, null normalization) and the sliding-window rate limiter (limit,
+  window expiry, per-key isolation).
+
+Not run here: Playwright E2E for the shopper path (browsers not in this
+workspace's CI) and live hosted-Supabase exercise of the storefront/checkout
+server actions (no project provisioned). The SQL-level dedupe constraint
+itself (`unique(org_id, client_event_id)`) was verified against the local
+Postgres harness in Phase 2; the Phase 4 tests cover the ingest orchestration
+around it.
+
 ## Phase 3 — Operator core (2026-09-28)
 
 Environment: Node v20.20.2, pnpm 10.20.0, Next.js 16.3.6. Verification on the
@@ -104,4 +148,3 @@ pre-created to mirror Supabase.
 Not run here: against a hosted Supabase project (none provisioned in this
 workspace), `supabase db reset` CLI path (documented in scripts/seed-reset.md),
 Playwright E2E (unchanged app surface in this phase).
-

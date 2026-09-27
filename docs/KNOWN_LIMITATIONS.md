@@ -1,6 +1,42 @@
 # Known Limitations
 
-## Phase 3 — Operator core (current)
+## Phase 4 — Storefront + events (current)
+
+- **Storefront/checkout verified unconfigured, not against hosted Supabase.**
+  All reads scope to published rows in SQL and all writes go through the
+  service-role event/checkout services, but no hosted project exists in this
+  workspace; end-to-end shopper flows were verified at the pure-logic level
+  (unit tests) plus unconfigured route probes.
+- **Rate limiting is per-instance.** `POST /api/events` uses an in-memory
+  sliding window (120 events/min/IP); serverless deployments limit per
+  function instance, not globally. A shared store (e.g. Postgres-backed
+  bucket) is the follow-up if abuse becomes a concern.
+- **Colour filter is a text match, size filter needs variant rows.** There is
+  no structured colour field in V1 (taxonomy has `palette_role`, not colour),
+  so `color=` matches title/brand/description text and is labeled as such.
+  `size=` matches `product_variants.label`; the seed has no variant rows, so
+  the facet matches nothing until variants exist. Both are labeled honestly in
+  the filter bar.
+- **Demo checkout order id is the bearer reference.** `/checkout/[orderId]`
+  loads the order via the service role; possession of the uuid grants view/
+  resolve access to that demo order. Acceptable for simulated payments (no
+  PII required, no real money); a real payment adapter must add buyer-scoped
+  authorization before this pattern ships for real orders.
+- **Inquiry flow records the event only.** `inquiry_start` is written to the
+  event stream (with a mailto fallback shown); there is no inquiries table in
+  the 59-table schema, so no inbox exists to receive messages.
+- **`search_result_click` linkage is best-effort.** It carries the
+  `search_submit` event id only when the ingest API response was readable
+  (fetch, not sendBeacon); unconfigured/unreachable ingest simply skips the
+  click event rather than blocking navigation.
+- **Product imagery renders as alt-text placeholder slots.** `product_assets`
+  metadata (alt text, provenance, synthetic flag) is displayed honestly, but
+  binary upload to Supabase Storage remains a later-phase integration, so no
+  `<img>` tags are emitted (no broken images).
+- **`/checkout/[orderId]` is an additive route** beyond the §23.1 canonical
+  map — see ADR-009.
+
+## Phase 3 — Operator core
 
 - **Server actions verified against the local Postgres harness, not hosted
   Supabase.** All mutations (capture, promote, availability transitions,
