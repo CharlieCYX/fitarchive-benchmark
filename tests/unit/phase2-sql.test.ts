@@ -25,11 +25,21 @@ const seedFiles = [
 const seed = seedFiles.map((f) => readFileSync(f, "utf8")).join("\n");
 
 describe("migration set (DATA_MODEL.md §5)", () => {
-  it("contains 0001–0019 in order (0019 added in Phase 3)", () => {
-    expect(migrations).toHaveLength(19);
+  it("contains 0001–0020 in order (0019 Phase 3 links; 0020 Phase 8–9 extensions)", () => {
+    expect(migrations).toHaveLength(20);
     migrations.forEach((f, i) => {
       expect(f.startsWith(String(i + 1).padStart(4, "0") + "_")).toBe(true);
     });
+  });
+
+  it("0020 adds garment ideation rounds + portfolio §21.2 columns (Phase 8–9)", () => {
+    const m20 = readFileSync(path.join(migrationsDir, "0020_phase8_9_extensions.sql"), "utf8");
+    expect(m20).toContain("garment_ideation_rounds");
+    expect(m20).toContain("ai_generation_id");
+    expect(m20).toContain("evidence_links");
+    expect(m20).toContain("ko_draft");
+    expect(m20).toContain("instrumentation_plan");
+    expect(m20).toContain("postmortem");
   });
 
   it("0019 links products back to source listings (§7.3 lineage)", () => {
