@@ -1,5 +1,54 @@
 # Test Report
 
+## Phase 8–9 — Garment Innovation Lab + Product Lab + Portfolio mode (2026-09-30)
+
+Environment: Node v20.20.2, pnpm 10.20.0 (via corepack), Next.js 16.3.6.
+Verification on the local-disk copy (`/tmp/fa-verify`) per the FUSE
+workaround.
+
+| Check | Command | Result |
+|---|---|---|
+| Install | `pnpm install --frozen-lockfile` | ✅ clean (lockfile unchanged — no new deps) |
+| Lint | `pnpm run lint` | ✅ 0 errors, 0 warnings |
+| Typecheck | `pnpm run typecheck` | ✅ clean |
+| Unit tests | `pnpm test` | ✅ 28 files, 234 tests passed (34 new) |
+| Build | `pnpm run build` | ✅ all routes compile; `/studio/garments( /[id])`, `/studio/product-lab(/[id])`, `/studio/portfolio(/[id])`, `/portfolio/[slug]`, `/api/portfolio/snapshot`, `/api/export/portfolio/[id]`, `/api/import/csv` all dynamic (`ƒ`) |
+| Route probe (unconfigured) | `pnpm start` + curl | ✅ `/studio/garments`, `/studio/product-lab`, `/studio/portfolio`, `/portfolio/demo`, `/studio/garments/<uuid>` all 200 with "Connect Supabase" states |
+| API degradation (unconfigured) | curl POST snapshot / import / GET export | ✅ honest 503 JSON on all three; never a crash |
+| Seed payload conformance | tsx script: seed frozen_payload × 2 vs `frozenPayloadSchema` | ✅ both schema_version 1 payloads VALID |
+
+New unit coverage (4 new files + 1 updated, 34 new tests):
+- `portfolio-snapshot.test.ts` — §21.2 allowlist payload assembly (exact
+  key set), KO machine-assisted flag logic, private-field stripping:
+  allowlist test (cost_basis_sgd / notes_private / seller_email /
+  buyer_contact / raw_response_private never present) + recursive denylist
+  detection with key paths; freeze versioning monotonic + unique slugs;
+  immutability guard (payload/version/frozen_at mutation rejected;
+  visibility flips allowed).
+- `csv-import.test.ts` — §23.3 CSV: quoted cells/embedded commas/newlines,
+  valid document accepted, missing required column fails the file, invalid
+  rows rejected individually (bad title/price/permission_state) while valid
+  rows still import, bad URL rejected / empty allowed, unknown columns
+  ignored-but-reported.
+- `garment-ideation.test.ts` — ideation round numbering, provenance gate
+  (prompt + ai_generation_id required), mock provider produces schema-valid
+  `garment.ideation` structured output; case study separates simulated
+  (clo_simulation/render/fit_map) from physical (wear_test/prototype_photo)
+  evidence; discrepancies collected; simulation-only project cannot claim
+  physical evidence; measurement deltas only on unit match.
+- `portfolio-evidence-graph.test.ts` — §21.1 canonical stage ordering,
+  duplicate collapse, attached-vs-manual labeling, stage/ref_table fit
+  validation.
+- `phase2-sql.test.ts` — updated: 20 migrations; 0020 contains
+  garment_ideation_rounds, evidence_links, ko_draft, instrumentation_plan,
+  postmortem.
+
+Not run here: migration 0020 against a live/local Postgres (no Postgres or
+pgserver available in this workspace — Phase 2 harness method unavailable);
+the file follows the 0019 additive pattern and is statically checked. The
+0017 frozen-snapshot trigger was already verified in Phase 2 against real
+Postgres (update to frozen_payload rejected).
+
 ## Phase 6–7 — Shopper Archive + Style Engine + AI subsystem (2026-09-30)
 
 Environment: Node v20.20.2, pnpm 10.20.0 (via corepack), Next.js 16.3.6.
@@ -235,4 +284,3 @@ pre-created to mirror Supabase.
 Not run here: against a hosted Supabase project (none provisioned in this
 workspace), `supabase db reset` CLI path (documented in scripts/seed-reset.md),
 Playwright E2E (unchanged app surface in this phase).
-
