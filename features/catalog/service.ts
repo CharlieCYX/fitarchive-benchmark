@@ -112,17 +112,24 @@ export async function getProductDetail(
   supabase: SupabaseClient,
   id: string,
 ): Promise<ProductDetail | null> {
-  const { data: product } = await supabase
-    .from("products")
-    .select("*, sellers(display_name), tags(label)")
-    .eq("id", id)
+  // Full-row read (incl. cost_basis_sgd / notes_private) goes through the
+  // security-definer RPC from 0021: the `authenticated` DB role is locked to
+  // the public column list, so `select *` would fail even for the owner.
+  // The RPC itself checks public.is_owner().
+  const { data: rawProduct, error } = await supabase
+    .rpc("get_owner_product_full", { p_id: id })
     .maybeSingle();
-  if (!product) return null;
+  if (error || !rawProduct) return null;
+  const product = rawProduct as ProductDetail["product"] & {
+    category_id: string | null;
+  };
 
   const [
     { data: measurements },
     { data: ownership },
     { data: assets },
+    sellerResult,
+    categoryResult,
     sourceListingResult,
   ] = await Promise.all([
     supabase
@@ -140,6 +147,20 @@ export async function getProductDetail(
       .select("id, bucket, path, privacy, alt_text, provenance, synthetic, rights_note")
       .eq("product_id", id)
       .order("created_at"),
+    product.seller_id
+      ? supabase
+          .from("sellers")
+          .select("display_name")
+          .eq("id", product.seller_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    product.category_id
+      ? supabase
+          .from("tags")
+          .select("label")
+          .eq("id", product.category_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
     product.source_listing_id
       ? supabase
           .from("source_listings")
@@ -149,12 +170,13 @@ export async function getProductDetail(
       : Promise.resolve({ data: null }),
   ]);
 
-  const row = product as Record<string, unknown>;
   return {
     product: product as ProductDetail["product"],
     sellerName:
-      (row.sellers as { display_name?: string } | null)?.display_name ?? null,
-    categoryLabel: (row.tags as { label?: string } | null)?.label ?? null,
+      (sellerResult.data as { display_name?: string } | null)?.display_name ??
+      null,
+    categoryLabel:
+      (categoryResult.data as { label?: string } | null)?.label ?? null,
     measurements: (measurements ?? []) as ProductDetail["measurements"],
     ownership: (ownership ?? []) as ProductDetail["ownership"],
     assets: (assets ?? []) as ProductDetail["assets"],

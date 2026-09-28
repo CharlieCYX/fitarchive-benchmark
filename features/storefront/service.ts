@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { StorefrontItem } from "./filters";
 import { ownershipWording, type OwnershipWording } from "./ownership";
+import { getReferralTarget } from "./referral";
 
 /**
  * Public storefront read service (§8.1) — server-only. Every query scopes to
@@ -290,29 +291,11 @@ export async function getPublishedProductBySlug(
 
   // Referral purchase target: the seller's original listing URL + the tracked
   // link that attributes the outbound click (§8.1, EVENTS §external_buy_click).
+  // source_listings / tracked_links are owner-only RLS tables, so this resolves
+  // via the service-role helper (red-team H3) — never the cookie-bound client.
   let referral: ProductPageData["referral"] = null;
   if (wording.purchaseMode === "referral") {
-    const [sourceResult, linkResult] = await Promise.all([
-      product.source_listing_id
-        ? supabase
-            .from("source_listings")
-            .select("source_url")
-            .eq("id", product.source_listing_id)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
-      supabase
-        .from("tracked_links")
-        .select("id, target_url")
-        .ilike("target_url", `%/products/${product.slug}%`)
-        .limit(1)
-        .maybeSingle(),
-    ]);
-    const destination = (sourceResult.data as { source_url?: string } | null)
-      ?.source_url;
-    const trackedLinkId = (linkResult.data as { id?: string } | null)?.id;
-    if (destination && trackedLinkId) {
-      referral = { destination, trackedLinkId };
-    }
+    referral = await getReferralTarget(product);
   }
 
   const drops = ((dropLinks.data ?? []) as unknown as Array<{
