@@ -42,6 +42,27 @@ export function isEventName(value: unknown): value is EventName {
   );
 }
 
+/**
+ * Server-only events (red-team H5): `checkout_start` / `order_complete`
+ * carry revenue and feed v_purchase_conversion, so they must never be
+ * accepted from the anonymous public ingest endpoint — the demo checkout
+ * service writes them server-side with the real order row as the source of
+ * truth. Their property schemas below stay in place for that server use;
+ * only the PUBLIC ingest path rejects them.
+ */
+export const SERVER_ONLY_EVENT_NAMES = [
+  "checkout_start",
+  "order_complete",
+] as const satisfies readonly EventName[];
+
+export type ServerOnlyEventName = (typeof SERVER_ONLY_EVENT_NAMES)[number];
+
+export function isServerOnlyEventName(
+  name: EventName,
+): name is ServerOnlyEventName {
+  return (SERVER_ONLY_EVENT_NAMES as readonly string[]).includes(name);
+}
+
 const uuid = z.string().uuid();
 const nullableUuid = z.string().uuid().nullable();
 const shortText = (max: number) => z.string().trim().min(1).max(max);
@@ -161,7 +182,10 @@ export type EventValidationResult =
 /**
  * Validate a raw POST body against the envelope + the per-name property
  * schema. Unknown names, malformed uuids and missing/extra-wrong required
- * properties are rejected (the API maps this to 400).
+ * properties are rejected (the API maps this to 400). This is the PUBLIC
+ * ingest validator (POST /api/events): server-only events
+ * (checkout_start / order_complete — revenue-bearing, H5) are rejected here
+ * even though their schemas remain valid for server-side writes.
  */
 export function validateEventPayload(body: unknown): EventValidationResult {
   const envelope = eventEnvelopeSchema.safeParse(body);
@@ -170,6 +194,13 @@ export function validateEventPayload(body: unknown): EventValidationResult {
   }
   const { event_name, client_event_id, occurred_at, route, referrer, properties } =
     envelope.data;
+
+  if (isServerOnlyEventName(event_name)) {
+    return {
+      ok: false,
+      error: `${event_name} is written server-side by the checkout service and is not accepted via public ingest.`,
+    };
+  }
 
   const props = EVENT_PROPERTY_SCHEMAS[event_name].safeParse(properties);
   if (!props.success) {

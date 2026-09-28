@@ -3,9 +3,9 @@
  * fallback). Pure module — unit-tested in tests/unit/storefront-query.test.ts.
  *
  * Server-side query params are the source of truth; the service layer scopes
- * to published rows in SQL first, then applies these filters. The AI parse
- * layer (Phase 6/7) will translate natural language INTO this same filter
- * shape — the deterministic path stays the fallback.
+ * to published rows in SQL first, then applies these filters. Free-text
+ * queries additionally go through the deterministic hard-constraint parser
+ * (§9.3 fallback, query-parse.ts) for explicit price/category phrases.
  */
 
 export interface StorefrontItem {
