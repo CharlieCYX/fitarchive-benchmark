@@ -1,5 +1,42 @@
 # Known Limitations
 
+## Phase 10 — Hardening (current)
+
+- **Seller portal scope (`/seller`).** Built, but deliberately read-only:
+  sellers see their own items, permission states and settlements — nothing
+  else (no messaging, no payout details beyond settlement rows, no editing;
+  changes go through the operator). The portal requires the seller record to
+  be linked to the sign-in account (`sellers.user_id`); the operator does
+  that in Studio.
+- **Launch Control (`/studio/launch`) is deferred, not shipped.** §7.7's
+  unified publish-gate / live-traffic / incident / rollback console does not
+  exist in V1; the real operations live in Catalog (per-product publish),
+  Drops (evidence-gated publish checklist) and Analytics (metric monitoring).
+  The page states this instead of quoting a phase ETA.
+- **Settings scope (`/settings`).** Real but minimal: profile display
+  (read-only — edits go through the operator in V1), instant self-service
+  JSON data export, and data-rights (export/delete) requests stored in
+  `data_rights_requests` for the operator to process. There is no automated
+  deletion pipeline; requests are processed manually and the requester sees
+  the status.
+- **§8.6 alternative finder is deferred.** "Find similar / alternatives" is
+  not built; PDPs show same-category "related pieces" instead, labeled as
+  such. No code pretends otherwise.
+- **CSV export does not exist.** The only export surface is the portfolio
+  snapshot export (`GET /api/export/portfolio/:id`, frozen JSON with
+  private-field stripping) and the §15.2 self-service account export. The
+  §23.3 CSV format is import-only.
+- **Owner product-detail reads go through a security-definer RPC**
+  (`get_owner_product_full`, 0021). Column privileges cannot distinguish
+  owner/seller/shopper (all share the `authenticated` DB role), so the
+  private columns (`cost_basis_sgd`, `notes_private`) are granted to NO web
+  role; the owner edit form reads them via the RPC which checks
+  `public.is_owner()`. Verified by the live probes in `tests/rls/probe.py`.
+- **CI workflow changes are local-only in this workspace** (the push token
+  lacks the `workflow` scope): `.github/workflows/ci.yml` gains E2E,
+  migrations-from-zero + RLS probe, and `pnpm audit` jobs in the working
+  copy and must be applied to the remote by a token with workflow scope.
+
 ## Phase 8–9 — Garment Lab + Product Lab + Portfolio (current)
 
 - **Verified unconfigured + at the pure-logic level.** Snapshot freeze
@@ -193,12 +230,13 @@
   surfaces, swap the row contents — SKUs and narrative structure already match.
 - **`time_to_sale` view is grouped per drop × category** (per the §2 spec); the
   seeded drop-level metric_snapshot (10.85 days) is the all-category median.
-- **RLS granularity:** owner and seller share the `authenticated` DB role, so
-  column-level privacy between them (e.g. seller must not read
-  `products.cost_basis_sgd` on own rows beyond row scope) is enforced at the
-  API layer, not by column privileges. Anon is fully locked down at the DB
-  level (column grant list on `products`). A `v_seller_products`-style view can
-  harden this later without contract change.
+- **RLS granularity (superseded by 0021 in Phase 10):** owner and seller share
+  the `authenticated` DB role. Phase 2–9 enforced column-level privacy between
+  them at the API layer; migration 0021 moved `products` to a hard DB-level
+  column lockdown for BOTH web roles (`anon` + `authenticated`), with owner
+  full-row reads via the `get_owner_product_full()` security-definer RPC.
+  Sellers therefore cannot read `cost_basis_sgd`/`notes_private` even on their
+  own items.
 - **`v_dq_duplicate_sources` is empty by construction** — the
   `unique(org_id, normalized_url)` index makes duplicates impossible; the view
   documents/audits the invariant rather than catching live rows.
