@@ -35,7 +35,7 @@ Conventions (ADR-002):
 | `job_status` | `queued, running, succeeded, failed, cancelled` | §17.2 |
 | `taxonomy_dimension` | `category, silhouette, proportion, material, palette_role, energy, era, aesthetic, climate, use` | §11.3 |
 
-## 2. Schema (§11.1 — all 59 tables)
+## 2. Schema (§11.1 — 59 contract tables + 1 additive: data_rights_requests in 0021 = 60)
 
 RLS shorthand (policies in migration 0013):
 `owner` = full access · `self` = row owner (`profile_id`/`user_id` match) ·
@@ -67,7 +67,7 @@ RLS shorthand (policies in migration 0013):
 ### Catalog
 | Table | Key columns | FKs | RLS |
 |---|---|---|---|
-| `products` | `id, org_id, slug text unique, sku text unique, title text, brand text, category_id (tag), condition_grade condition_grade, defect_notes text, description_public text, notes_private text, public_price_sgd numeric(12,2), cost_basis_sgd numeric(12,2), seller_id nullable, source_listing_id nullable (0019 — promote lineage §7.2→§7.3), availability availability_status default 'draft', synthetic_media_present bool default false, published_at timestamptz` | tags(category_id), sellers, source_listings | public read where `published_at is not null`; owner full; seller-self read |
+| `products` | `id, org_id, slug text unique, sku text unique, title text, brand text, category_id (tag), condition_grade condition_grade, defect_notes text, description_public text, notes_private text, public_price_sgd numeric(12,2), cost_basis_sgd numeric(12,2), seller_id nullable, source_listing_id nullable (0019 — promote lineage §7.2→§7.3), availability availability_status default 'draft', synthetic_media_present bool default false, published_at timestamptz` | tags(category_id), sellers, source_listings | public read of PUBLIC COLUMNS ONLY where `published_at is not null` (0021 column lockdown for `anon` + `authenticated`; `cost_basis_sgd`/`notes_private` never web-readable — owner reads them via `get_owner_product_full()`); owner full; seller-self read (public columns) |
 | `product_variants` | `id, product_id, label text (size/color), sku_suffix text, availability availability_status` | products | as products |
 | `product_measurements` | `id, product_id, name text, value numeric(8,2), unit text, method text` | products | as products |
 | `product_assets` | `id, org_id, product_id nullable, bucket text, path text, checksum text, file_type text, privacy text (public/private), alt_text text, provenance text (operator/seller/ai_synthetic), synthetic bool default false, rights_note text` | products | public read public assets of published products; owner full; seller-self read own items' assets |
@@ -206,6 +206,9 @@ CI migration check. `supabase/seed.sql` is separate from migrations.
 | 0016 | `0016_labs.sql` | garment_projects, garment_tests, garment_assets, product_briefs, prds, prototype_tests |
 | 0017 | `0017_portfolio.sql` | portfolio_projects, portfolio_artifacts, portfolio_snapshots |
 | 0018 | `0018_ops.sql` | audit_log, jobs, system_incidents + updated_at triggers |
+| 0019 | `0019_phase3_links.sql` | products.source_listing_id (§7.2→§7.3 promote lineage) |
+| 0020 | `0020_phase8_9_extensions.sql` | garment measurements sets, garment_ideation_rounds, prds instrumentation/release/postmortem, portfolio evidence graph + ko_draft |
+| 0021 | `0021_products_column_lockdown.sql` | products column lockdown for `authenticated` (red-team C1: cost_basis_sgd/notes_private never web-readable), `get_owner_product_full()` security-definer RPC, data_rights_requests (§15.2) |
 | — | `supabase/seed.sql` | Deterministic demo seed per §23.4/§23.5 (20–30 listings, 12–15 products, 3–4 sellers, Drop #001 live + Drop #002 planned, 2 campaigns, tracked links, 300–500 events, 1 garment case, 1 style user, 2 portfolio snapshots; FA-001…FA-010 sample products) |
 
 Dependency notes: 0006 needs 0003/0004; 0007 needs 0006; 0010 needs 0006/0007;
