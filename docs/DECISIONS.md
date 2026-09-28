@@ -1,114 +1,123 @@
-# FitArchive Benchmark — Architectural Decision Records
+# FitArchive Benchmark — Decision Records
 
-Format: Context → Decision → Consequences. New ADRs append; never rewrite history.
+Durable architectural decisions (ADRs). Process decisions (scope, priorities) live in
+`IMPLEMENTATION_PLAN.md`; open defaults live in `ASSUMPTIONS.md` and get promoted here
+once resolved.
 
-## ADR-001 — Next.js App Router as the single application frame
-**Context:** The system needs SEO-friendly public storefront/portfolio pages,
-dense authenticated operator screens, server-side authorization, and
-Netlify-compatible deployment (§6.1).
-**Decision:** Next.js App Router + React Server Components. Public/editorial pages
-are server-rendered for SEO and speed; operator studio uses client interactivity
-with server actions for mutations; thin API routes only where webhooks, beacons or
-non-HTML responses require them (§23.2).
-**Consequences:** Server/client boundary becomes a security boundary (privileged
-code never ships to the browser). Netlify deploy via the official Next runtime.
-Alternative considered: separate SPA + API — rejected (two deployables, duplicated
-auth, worse SEO for a portfolio whose public pages ARE the product).
+## ADR-001 — Framework: Next.js App Router
+**Context:** The spec names "Next.js or SvelteKit"; we need SSR for the editorial
+storefront, server actions for admin mutations, and file-based routing for ~40 routes.
+**Decision:** Next.js 15 App Router + TypeScript strict. Server components by default;
+client components only where interaction demands it.
+**Consequences:** Route map in ARCHITECTURE.md §23.1 maps 1:1 to `app/`. Server
+components query Supabase directly (no client data-fetching waterfalls).
 
-## ADR-002 — One Postgres schema with RLS instead of multiple services
-**Context:** §6.1 mandates Supabase; the permission model (§5) spans owner/seller/
-shopper/analyst/public with row-level boundaries (seller sees only own items; cost
-basis never public).
-**Decision:** A single normalized Postgres schema (59 tables, DATA_MODEL.md) with
-RLS enabled on every private table; authorization enforced in the database, with
-server-side role guards as a second layer. No microservices.
-**Consequences:** RLS is testable (§16.1 database tests, §20.3 red-team) and
-impossible to bypass from the client; one migration history keeps 20+ modules
-coherent (§2.2 forbids collapsing into JSON blobs). Cost: policies require care and
-a dedicated migration (0013) plus per-table policies in later migrations. Data
-conventions fixed here: uuid PKs, `timestamptz`, SGD `numeric(12,2)` money suffixed
-`_sgd`, `org_id` on org-scoped tables.
+## ADR-002 — Database naming & identity conventions
+**Decision:** snake_case table/column names exactly as listed in DATA_MODEL.md §2;
+`org_id uuid not null references organizations(id)` on every org-scoped table;
+money as `numeric(12,2)` in SGD; enums created once in migration 0001 and shared.
+`organizations` exists from day one (multi-org in the data model, single-org in
+practice) so RLS never needs a breaking rewrite.
 
-## ADR-003 — Provider-neutral AI adapter with a mock default
-**Context:** §13.1: FitArchive must not be a Kimi-only product; providers are
-implementation details; §17.3: the app must fully work without paid AI.
-**Decision:** `lib/ai` exposes the §13.1 `AIProvider` interface
-(`generateText`, `generateStructured<T>`, optional `analyzeImage`, optional
-`embed`). Adapters: `MockProvider` (deterministic, default, `AI_PROVIDER=mock`),
-then optional `kimi`/`openai`/`anthropic`/`local`. FitArchive owns prompts
-(`ai_prompt_versions`), evaluation cases (AI Lab), and canonical data. Every call
-persists an `ai_generations` row with full provenance (§13.3) and outputs stay
-`draft` until human acceptance (§6.4 rule 6).
-**Consequences:** Provider swap = env change; benchmark runs at zero AI cost; AI
-failure modes (malformed JSON, hallucinated IDs) are contract-tested against the
-mock (§16.1). AI never writes canonical product data directly.
+## ADR-003 — RLS model: role-scoped, column-aware
+**Context:** §5 defines six app roles (owner/seller/shopper/stylist/analyst/viewer)
+backed by two Supabase DB roles (`authenticated`, `anon`) — app role lives on
+`profiles.role`.
+**Decision:** Every private table has RLS enabled with policies keyed off
+`auth.uid()` joined to `profiles`. Public read access is granted only to
+published products/drops and public portfolio snapshots. Column-level privacy
+(`products.cost_basis_sgd`, `products.notes_private`) is enforced by a column-level
+grant list for `anon` and by API-level field selection for `authenticated`, plus a
+seller-scoped view if needed (see KNOWN_LIMITATIONS until a red-team pass forces a
+view).
+**Consequences:** The service role is used ONLY server-side for event ingest and
+jobs; it never powers UI reads. All UI reads flow through RLS-enforced clients.
 
-## ADR-004 — Demo checkout as a simulated payment state machine
-**Context:** §10.3: the benchmark must not become a payment-compliance project;
-two modes required: Demo Checkout and External/Manual Order.
-**Decision:** `payments` rows driven by an explicit state machine
-(`initiated → authorized → captured`, with `failed`/`refunded`; terminal demo rows
-marked `simulated`) behind a `PaymentProvider` adapter interface. `orders.mode`
-is `demo` or `external_manual`. A real payment adapter (e.g. a sandbox provider +
-`/api/webhooks/payment`) can be added later without schema change.
-**Consequences:** Order/settlement math is fully testable end-to-end; no live
-credentials; settlement ledger (§10.4) runs identically for both modes.
+## ADR-004 — Payments: simulated now, provider-adapter seam
+**Context:** No payment account credentials exist for this benchmark; §10.3 allows
+`order_mode='demo'` as long as the state machine is complete.
+**Decision:** Implement the full payment state machine (`initiated → authorized →
+captured / failed / refunded`) against a `simulated` provider; wrap payment calls in
+a `PaymentProvider` interface so Stripe (or another provider) can replace it by
+configuration. Webhook endpoint exists and validates signature shape; demo orders
+can drive it locally.
+**Consequences:** Nothing in checkout lies: CTAs say "Simulated payment"; no card
+data is ever collected. Order/payment/refund tables are production-shaped.
 
-## ADR-005 — Rename spec table `references` → `style_references`
-**Context:** §11.1 lists tables `references` and `reference_attributes`, but
-`REFERENCES` is a SQL reserved word, forcing permanent double-quoting and inviting
-subtle bugs.
-**Decision:** Tables are named `style_references` and
-`style_reference_attributes`. All other §11.1 table names are used verbatim.
-**Consequences:** Every doc and migration uses the renamed pair consistently
-(this is the only deliberate deviation from §11.1 naming).
+## ADR-005 — Reserved-word rename: references → style_references
+**Decision:** `references` is a SQL reserved word; the tables are named
+`style_references` and `style_reference_attributes` everywhere (spec acknowledged
+the conflict). This is the only sanctioned deviation from the §11.1 table list.
 
-## ADR-006 — Portfolio snapshots are frozen, append-only JSON payloads
-**Context:** §6.4 rule 8: public case studies derive from a publishable snapshot so
-later operational edits never silently rewrite old portfolio evidence; §19.1 tests
-"portfolio freeze".
-**Decision:** `portfolio_snapshots.frozen_payload` (jsonb) captures the fully
-rendered case study (all §21.2 fields + resolved metric values + artifact
-references) at freeze time. `/portfolio/[slug]` reads snapshots only, never live
-tables. New version = new snapshot row (`version` increments); old public snapshots
-stay byte-identical. Private fields (cost basis, seller notes, buyer contacts, raw
-AI output) are stripped at freeze time, enforced by an export test (§16.1).
-**Consequences:** Recruiter links are stable and historically faithful; the
-"evidence graph" (§21.1) links back to live records for the operator while the
-public sees an immutable view.
+## ADR-006 — Event ingest: thin API route, validated, deduplicated
+**Decision:** `POST /api/events` is the single client-event ingest path
+(`trackEvent` helper wraps it). Server validates `event_name` against the dictionary,
+validates per-name properties schemas, stamps `occurred_at` server-side when absent,
+and inserts with the service role. `client_event_id uuid` + `unique(org_id,
+client_event_id)` makes sendBeacon/fetch replays idempotent (§19.1). A lightweight
+in-memory rate limiter caps ingest per IP; heavy abuse protection (e.g. bot
+detection) is deferred as not required for V1.
+**Consequences:** Server-side events (checkout, settlements) insert via the same
+writer function, bypassing HTTP. Dashboards only ever read `events` + metric views.
 
-## ADR-007 — Source PDFs are NOT committed as binaries; distilled instead
-**Context:** Spec §2.1 step 2 says to put both PDFs into `/docs/reference`.
-However, the GitHub MCP tooling used to populate the empty repo
-(`CharlieCYX/fitarchive-benchmark`) pushes file contents as text and cannot upload
-binary PDFs. Committing corrupted/base64-mangled binaries would be worse than
-omitting them.
-**Decision:** The two source PDFs are not committed. Instead their content is
-distilled into `docs/reference/ROADMAP_SUMMARY.md` and
-`docs/reference/BUILD_BIBLE_SUMMARY.md` — structured, faithful summaries (phases,
-guardrails, MUST rules, acceptance criteria, hard-fail conditions) sufficient for
-future agents to work without re-reading the PDFs. The original PDFs remain in the
-operator's upload area outside the repo.
-**Consequences:** Repo stays text-only and reviewable; summaries become the
-canonical in-repo reference (contract docs in `docs/` remain authoritative where
-they are more precise). If binary upload becomes available later, the PDFs may be
-added to `docs/reference/` without changing any contract.
+## ADR-007 — AI provider abstraction with a mock default
+**Context:** §17.3 — the app must function fully without paid AI; §13 forbids
+auto-publish and hidden generation.
+**Decision:** `features/ai/provider.ts` defines `AIProvider` (structured JSON out).
+`MockAIProvider` is deterministic, labeled, and covers decode + narration + garment
+concepts. `AnthropicProvider` activates via `AI_PROVIDER=anthropic` + env key.
+Every generation writes an `ai_generations` row with the full §13.3 provenance
+field set before the UI can display it.
+**Consequences:** Tests and CI run on the mock provider; nothing in the product
+requires a network call to an AI vendor.
 
-## ADR-008 — First-party events table + SQL views as the only metric source
-**Context:** §6.4 rule 4 (single semantic layer), §19.3 (hard fail if dashboards
-use hard-coded values), §12.2 (canonical definitions).
-**Decision:** One append-only `events` table with dictionary-validated names and
-idempotent ingest (`unique(org_id, client_event_id)`); every displayed metric comes
-from a SQL view registered in `metric_definitions` and accessed via `lib/metrics`.
-**Consequences:** Charts can always be traced to raw rows (§20.4); dedupe stress
-test is a unique-index test; adding a metric = one view + one registry row.
+## ADR-008 — Portfolio = frozen snapshots
+**Decision:** Public portfolio pages read `portfolio_snapshots.frozen_payload`
+only. Freezing validates payload completeness (§15.2) and snapshots the referenced
+metrics/artifacts. Editing source data (experiments, products, metrics) NEVER
+mutates a published snapshot; a new snapshot version is created instead.
+`is_public` gates anonymous access.
+**Consequences:** Portfolio content is stable for external reviewers; the live app
+can evolve without breaking shared links.
 
-## ADR-009 — Demo checkout lives at `/checkout/[orderId]` (additive route)
-**Context:** The canonical route map (§23.1) lists storefront routes but names no
-checkout route; §10.3 requires a demo checkout (simulated payment state machine).
-**Decision:** Add exactly one additive public route, `/checkout/[orderId]`, which
-renders the simulated payment screen (created → pending → paid | failed). No
-existing route is renamed or repurposed; the route map is otherwise unchanged.
-**Consequences:** Checkout is deep-linkable and the PDP stays clean. The order id
-in the URL is the bearer reference for the demo (acceptable for simulated orders;
-a real adapter would add buyer-scoped authorization — see KNOWN_LIMITATIONS).
+## ADR-009 — Demo checkout confirmation is an additive route
+**Context:** §23.1 fixes `/checkout/success`, but an out-of-band payment confirmation
+(pending orders, buyer revisiting the link) needs a resolvable state page before
+success exists. The §10.3 state machine includes `pending`, which must be renderable.
+**Decision:** Add `/checkout/[orderId]` as an additive route (§6.4 allows additions,
+never removals/renames). It renders `pending` (with the resolve-payment form) or
+`paid`/`fulfilled` states honestly, and redirects to `/checkout/success` after a
+simulated capture. `/checkout/success` remains and is reached through the normal
+pay flow.
+**Consequences:** The buyer always has a linkable, resumable confirmation URL —
+required because demo checkout "delivers" via the external reference note, and
+buyer identity is optional for demo orders.
+
+## ADR-010 — Canonical §6 REST endpoints are implemented as Next.js server actions
+**Context:** ARCHITECTURE §6 lists canonical REST endpoints
+(`POST /api/research/listings`, `POST /api/products`, `POST /api/drops`,
+`POST /api/drops/:id/publish`, `POST /api/search`, `POST /api/webhooks/payment`).
+The build uses Next.js App Router, where server actions are the idiomatic
+mutation channel: they ride the same authenticated request context as the
+pages that invoke them, need no client-side fetch plumbing, and keep the
+cookie-bound (RLS-enforcing) Supabase client as the default path.
+**Decision:** Owner-facing mutations from §6 (research listings, products,
+drops, drop publish) are implemented as Next.js server actions under
+`features/*/actions.ts` with zod validation + server-side role guards —
+not as REST routes. The public/externally-callable API surface that remains
+as real HTTP routes is exactly: `POST /api/events` (client event ingest),
+`/api/style/*` (session + generate, browser-driven), `POST /api/ai/generate`
+(owner provider gateway), `POST /api/portfolio/snapshot` (freeze),
+`GET /api/export/portfolio/:id` (downloadable export), `POST /api/import/csv`
+(file upload), plus additive `GET /go/:code` (tracked-link redirect,
+ADR-worthy but additive: §7.6 requires the redirect target and no REST
+endpoint was specified for it) and `GET /api/health`. `POST /api/search` is
+realized as the `/search` page's server component + deterministic filter
+params (§9.3 fallback); `POST /api/webhooks/payment` stays unimplemented
+because no payment provider is configured (demo checkout is a state machine,
+ADR-004).
+**Consequences:** The §6 owner endpoints have no REST surface to secure or
+rate-limit; their authorization is the server-action guard + RLS. External
+integrators cannot call them as plain HTTP — acceptable for V1 (no external
+consumers exist); if one appears, add thin `/api/*` wrappers over the same
+feature services rather than duplicating logic.
