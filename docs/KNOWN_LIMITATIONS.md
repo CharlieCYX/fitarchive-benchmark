@@ -1,6 +1,41 @@
 # Known Limitations
 
-## Phase 6–7 — Archive + Style Engine + AI (current)
+## Phase 8–9 — Garment Lab + Product Lab + Portfolio (current)
+
+- **Verified unconfigured + at the pure-logic level.** Snapshot freeze
+  assembly, §15.2 private-field stripping, evidence-graph ordering, CSV
+  validation and ideation provenance are pure modules with 34 new unit
+  tests; routes render 200 unconfigured and the three new APIs return
+  honest 503s. No hosted Supabase exists in this workspace, so the
+  configured write path (freeze insert, CSV insert) is verified by code
+  review plus the Phase 2 Postgres harness pattern — the 0017
+  frozen-snapshot immutability trigger itself was verified against real
+  Postgres in Phase 2. Migration 0020 is additive (0019 pattern) and was
+  statically checked, not executed against Postgres here.
+- **Garment ideation uses the mock provider by default.** Output is labeled
+  `[mock-ai …]`, recorded with full §13.3 provenance and stays `draft`; a
+  real provider slots in via `AI_PROVIDER` without touching the round
+  workflow. The mock's KO "translation" preserves the English source and
+  states that it cannot translate — the machine-assisted flag is the honest
+  part, the Korean is a placeholder until a real provider or human writes it.
+- **Asset uploads are metadata records, not file uploads.** garment_assets
+  and portfolio_artifacts store path + intent caption + version (+ optional
+  ai_generation_id link); the Storage upload widget is out of scope for V1
+  (same pattern as campaign assets).
+- **CSV import resolves source_platform by exact name** (case-insensitive)
+  against seeded platforms; unknown platforms are rejected per-row with the
+  known list in the error. §23.3's category/aesthetic/color/material columns
+  are validated but not mapped to taxonomy tags on import (they inform later
+  tagging; mapping would require the tag-assignment UI).
+- **Portfolio export of a private snapshot requires the owner session**;
+  public snapshots export anonymously. The payload is re-validated and
+  re-scanned for private keys on every export (defense in depth beyond the
+  freeze-time guard).
+- **Snapshot slugs are versioned** (`<slug>-vN`): unpublishing then
+  republishing later versions means older public URLs go dark rather than
+  silently changing content — that is the intended frozen-snapshot trade-off.
+
+## Phase 6–7 — Archive + Style Engine + AI
 
 - **Verified unconfigured + at the pure-logic level.** All style-engine
   constraint logic, the mock provider, the structured-output validator and
