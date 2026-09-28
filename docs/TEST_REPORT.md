@@ -284,3 +284,4 @@ pre-created to mirror Supabase.
 Not run here: against a hosted Supabase project (none provisioned in this
 workspace), `supabase db reset` CLI path (documented in scripts/seed-reset.md),
 Playwright E2E (unchanged app surface in this phase).
+
