@@ -22,7 +22,7 @@ the app works fully without paid AI).
 | `docs/reference/BUILD_BIBLE_SUMMARY.md` | Distillation of the governing spec: MUST rules, acceptance criteria, hard-fail conditions |
 | `docs/reference/ROADMAP_SUMMARY.md` | Distillation of the FitArchive Master Roadmap 2026–2027 (strategy, 21 phases, guardrails) |
 | `docs/ARCHITECTURE.md` | System map, module boundaries, repo shape, route & API maps, architectural rules |
-| `docs/DATA_MODEL.md` | Full relational schema (59 tables), enums, RLS matrix, taxonomy, migration plan |
+| `docs/DATA_MODEL.md` | Full relational schema (59 contract tables + additive extensions), enums, RLS matrix, taxonomy, migration plan |
 | `docs/EVENTS_AND_METRICS.md` | Event dictionary, canonical metric definitions (SQL views), experiment object |
 | `docs/IMPLEMENTATION_PLAN.md` | Phase-by-phase deliverables and exit conditions |
 | `docs/ASSUMPTIONS.md` | Defaults for everything the spec leaves open |
@@ -50,17 +50,41 @@ privileged operations), and apply migrations:
 
 ```bash
 supabase link --project-ref <ref>
-supabase db push          # migrations 0001+ (0001–0002 exist as of Phase 1)
+supabase db push          # migrations 0001–0021 (incl. 0021 products column lockdown)
 ```
+
+A zero-to-RLS-probed migration run also works locally without hosted Supabase
+(ephemeral Postgres via pgserver):
+
+```bash
+python3 -m pip install pgserver "psycopg[binary]"
+python3 tests/rls/probe.py   # applies 0001–0021, then runs 13 RLS probes
+```
+
+## Module status (Phase 10)
+
+| Module | Status |
+|---|---|
+| Public storefront (drops, products, search) | Shipped — deterministic filters + hard-constraint query parse (§9.3) |
+| Demo checkout (simulated payments) | Shipped — state machine, server-side events |
+| Operator Studio (research, catalog, sellers, drops, campaigns, analytics, labs, portfolio) | Shipped — owner-only |
+| Launch Control (§7.7) | **Deferred** — publish paths live in Catalog/Drops; see KNOWN_LIMITATIONS |
+| Seller portal (`/seller`) | Shipped — read-only: own items, permissions, settlements |
+| Settings (`/settings`, §15.2) | Shipped — profile display, JSON data export, data-rights requests |
+| Style Engine + AI (mock provider default) | Shipped — deterministic + provider-optional |
+| Tracked-link redirect (`/go/:code`) | Shipped — campaign_link_click + 302 |
+| §8.6 alternative finder | **Deferred** — PDPs show related pieces instead |
+| CSV export | Not built — portfolio JSON export only |
 
 Everyday commands:
 
 ```bash
 corepack pnpm lint        # ESLint (flat config, next/core-web-vitals + typescript)
 corepack pnpm typecheck   # tsc --noEmit (strict)
-corepack pnpm test        # Vitest unit tests
+corepack pnpm test        # Vitest unit tests (243 tests across 29 files)
 corepack pnpm build       # production build
 PLAYWRIGHT_WEBSERVER=1 corepack pnpm test:e2e   # Playwright smoke (needs pnpm build first)
+python3 tests/rls/probe.py                      # migrations from zero + RLS probes (real Postgres)
 ```
 
 Demo roles: owner / seller / shopper (seeded). Seed data is synthetic and labeled

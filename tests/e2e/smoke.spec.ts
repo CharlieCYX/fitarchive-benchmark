@@ -26,10 +26,16 @@ test.describe("smoke", () => {
     expect(body).toHaveProperty("buildTime");
   });
 
-  test("studio shell renders with honest planned states", async ({ page }) => {
+  test("studio shell renders; research inbox is a real module (red-team H2)", async ({ page }) => {
     await page.goto("/studio");
     await expect(page.getByRole("heading", { name: /command center/i })).toBeVisible();
+    // The research inbox shipped in Phase 2 — it must NOT show the old
+    // "Planned — Phase 2" placeholder anymore (unconfigured mode renders the
+    // honest Connect-Supabase state for the same module).
     await page.goto("/studio/research");
-    await expect(page.getByText(/planned — phase 2/i).first()).toBeVisible();
+    await expect(
+      page.getByText(/research inbox/i).first(),
+    ).toBeVisible();
+    await expect(page.getByText(/planned — phase 2/i)).toHaveCount(0);
   });
 });
