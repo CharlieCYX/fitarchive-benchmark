@@ -379,7 +379,7 @@ export default async function GarmentProjectPage({
           <section>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-success">Physical evidence</h3>
             {caseStudy.physical.tests.length + caseStudy.physical.assets.length === 0 ? (
-              <p className="mt-2 text-sm text-warm-700">No physical prototype or wear test recorded yet — the case study cannot claim tested performance.</p>
+              <p className="mt-2 text-sm text-warm-500">No physical prototype or wear test recorded yet — the case study cannot claim tested performance.</p>
             ) : (
               <ul className="mt-2 space-y-2 text-sm text-warm-700">
                 {caseStudy.physical.tests.map((t, i) => (
